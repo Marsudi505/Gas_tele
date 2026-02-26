@@ -1,0 +1,20 @@
+{
+  "name": "teampick-bot-termux",
+  "version": "1.0.0",
+  "description": "Bot Relay Teampick V20 (Termux Edition)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.6.0",
+    "axios": "^1.6.7",
+    "bwip-js": "^4.0.0",
+    "input": "^1.0.1",
+    "pino": "^8.19.0",
+    "telegram": "^2.22.2",
+    "tesseract.js": "^5.0.5"
+  },
+  "author": "Teampick",
+  "license": "MIT"
+}
