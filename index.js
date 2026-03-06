@@ -1,6 +1,6 @@
 /**
- * 🚀 BAWX PROJECT - V20 (BACKEND RELAY BOT)
- * Fitur: /stok, /fair, /ping, CDN Image, Menu Mewah, SISTEM ANTREAN, & /term (NOTIFIKASI SELESAI).
+ * 🚀 BAWX PROJECT - V20 (STABLE TELEGRAM RELAY)
+ * Fitur: /stok (!pluklik), /fair, /ping, /term (Telegram Queue), & /caritoko (Fixed).
  */
 
 const TG_API_ID = 30042890; 
@@ -49,7 +49,7 @@ function printBanner() {
    ╩ ╚═╝╩ ╩╩ ╩╩  ╩╚═╝╩ ╩
       P R O J E C T
     `);
-    console.log("\x1b[32m%s\x1b[0m", `  STATUS: READY | MODE: V20 (BACKEND RELAY ACTIVE)`);
+    console.log("\x1b[32m%s\x1b[0m", `  STATUS: READY | MODE: V20 (STABLE TELEGRAM RELAY)`);
     console.log("\x1b[37m%s\x1b[0m", "  --------------------------------------------------\n");
 }
 
@@ -184,6 +184,7 @@ async function sendFakeMenu(jid, sender) {
     const userId = sender.split('@')[0];
     const waktu = new Date().toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta' }).replace(/:/g, '.');
 
+    // Menu dikembalikan sesuai permintaan awal tanpa ada sisa-sisa perintah /cari
     const menuText = `
 ┏━━◪ *BAWX PROJECT*
 ┃
@@ -199,7 +200,7 @@ async function sendFakeMenu(jid, sender) {
 ┣ /ping - Cek Status Bot
 ┃
 ┣ [ ADMIN MODE ]
-┣ /term - Headless Data Scrape
+┣ /term - Headless TG Scrape
 ┣ /export - Download Database JSON
 ┃
 ┗━━◪ _Power by BAWX PROJECT_`.trim();
@@ -249,15 +250,14 @@ async function handleTgEvent(ev) {
     const text = msg.message || "";
     const isSilentMode = sessionData ? sessionData.isSilentMode : false; 
 
-    // 🔧 PERBAIKAN BARU: DETEKSI PROSES SELESAI
     if (text.toLowerCase().includes("selesai diproses total")) {
         if (isSilentMode) {
             console.log(`\x1b[32m[SYSTEM]\x1b[0m Pemrosesan Terminal Selesai! Mengirimkan notifikasi ke WhatsApp...`);
             await wa.sendMessage(waJid, { text: `✅ *PROSES TERMINAL SELESAI*\n\nSeluruh data PLU telah berhasil di-scrape dan disimpan ke dalam database secara senyap.` });
-            userSessions.delete(waJid); // Bersihkan sesi agar bisa normal lagi
+            userSessions.delete(waJid); 
             return;
         } else {
-            return; // Abaikan pesan ini jika di mode normal agar tidak spam di WA
+            return; 
         }
     }
 
@@ -484,7 +484,6 @@ async function initWA() {
 
         const cmd = body.toLowerCase();
 
-        // 🚀 FUNGSI BARU: /TERM (HEADLESS SCRAPING MODE)
         if (cmd.startsWith('/term')) {
             console.log(`\x1b[35m[CMD]\x1b[0m Eksekusi perintah /term oleh ${userId}`);
             
@@ -626,18 +625,27 @@ async function initWA() {
             return;
         }
 
+        // ======================================================================
+        // 🚀 UPDATE: FORMAT BARU PERINTAH /STOK (!pluklik)
+        // ======================================================================
         if (cmd.startsWith('/stok')) {
             console.log(`\x1b[35m[CMD]\x1b[0m Eksekusi perintah /stok oleh ${userId}`);
+            
+            // Memisahkan pesan berdasarkan spasi untuk mengambil PLU dan Kode Toko
             const args = body.split(' ').filter(arg => arg !== ''); 
             if (args.length < 3) {
-                await wa.sendMessage(sender, { text: "⚠️ Format salah!\nGunakan: `/stok (plu) (kodetoko)`\nContoh: `/stok 12345678 tnxi`" });
+                await wa.sendMessage(sender, { text: "⚠️ Format salah!\nGunakan: `/stok (plu) (kodetoko)`\nContoh: `/stok 20030644 TNXI,TEH5`" });
                 return;
             }
+            
             const plu = args[1];
-            const kodetoko = args[2];
+            // Menggabungkan semua sisa argumen sebagai kode toko (antisipasi jika user mengetik dengan spasi antar koma)
+            const kodetoko = args.slice(2).join(''); 
 
-            const sentMsg = await wa.sendMessage(TARGET_CEK_STOK_GROUP, { text: `.plu ${plu} ${kodetoko}` });
+            // Format baru sesuai perubahan di sistem Supplier Bapak (!pluklik)
+            const sentMsg = await wa.sendMessage(TARGET_CEK_STOK_GROUP, { text: `!pluklik ${plu} ${kodetoko}` });
             const msgId = sentMsg.key.id;
+            
             const timer = setTimeout(() => { pendingRequests.delete(msgId); }, 3 * 60 * 1000); 
 
             pendingRequests.set(msgId, { originalSender: sender, timer: timer });
@@ -663,6 +671,8 @@ async function initWA() {
             userSessions.set(sender, { pbar: pbar, waitingForInput: false, isSilentMode: false });
             await tg.sendMessage(TARGET_POINKU_BOT, { message: body });
         } 
+        
+        // Menangkap /caritoko dan perintah tak dikenal lainnya untuk dilempar ke Telegram
         else if (body.startsWith('/')) {
             console.log(`\x1b[35m[CMD]\x1b[0m Forwarding perintah ${cmd} ke Telegram...`);
             userSessions.clear(); 
@@ -670,6 +680,7 @@ async function initWA() {
             userSessions.set(sender, { pbar: pbar, waitingForInput: false, isSilentMode: false });
             await tg.sendMessage(TARGET_TG_BOT, { message: body });
         } 
+        
         else if (userSessions.has(sender) && userSessions.get(sender).waitingForInput === true) {
             console.log(`\x1b[35m[INPUT]\x1b[0m Mengirimkan input ke Telegram...`);
             const pbar = await startProgressBar(sender, "Mencari data...");
